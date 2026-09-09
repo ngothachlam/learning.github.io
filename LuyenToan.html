@@ -91,9 +91,7 @@
         }
         .btn-start:hover { background: #0369a1; }
         
-        .btn-secondary {
-            background: #059669;
-        }
+        .btn-secondary { background: #059669; }
         .btn-secondary:hover { background: #047857; }
 
         .modal-overlay {
@@ -308,30 +306,26 @@
             <input type="number" id="timeInput" value="3" min="1" max="60">
         </div>
 
-        <button class="btn-start" onclick="handleStartQuiz()">🚀 Bắt Đầu Làm Bài</button>
-        <button class="btn-start btn-secondary" onclick="openLeaderboard()">🏆 Bảng Xếp Hạng</button>
+        <button class="btn-start" id="btnStartQuiz">🚀 Bắt Đầu Làm Bài</button>
+        <button class="btn-start btn-secondary" id="btnOpenLeaderboard">🏆 Bảng Xếp Hạng</button>
     </div>
 
     <!-- POPUP SETTING -->
     <div class="modal-overlay" id="settingModal">
         <div class="setting-card">
             <h3 style="margin:0 0 8px 0; color:#0284c7;">Cài Đặt</h3>
-            
             <label class="setting-option">
                 <span>Gõ ngược</span>
                 <input type="checkbox" id="reverseInputCheck" checked>
             </label>
-
             <label class="setting-option">
                 <span>Đọc lời nhắc giọng nói</span>
                 <input type="checkbox" id="voicePromptCheck" checked>
             </label>
-
             <label class="setting-option">
                 <span>Âm thanh gõ & Đúng/Sai</span>
                 <input type="checkbox" id="soundEffectCheck" checked>
             </label>
-
             <button class="btn-start" style="padding:8px;" onclick="closeSetting()">Đóng</button>
         </div>
     </div>
@@ -389,10 +383,45 @@
         </div>
     </div>
 
-    <script>
-        // === CẤU HÌNH GOOGLE APPS SCRIPT URL ===
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXy_if6mnFHhXUuMjtXYG4KvHoI44gn1N62Dzu7fIIsbrIlrw4AkVrEfPCmi_DZMymGw/exec";
+    <!-- SDK FIREBASE (v9 Modules) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, doc, getDoc, setDoc, updateDoc, increment, 
+            collection, query, orderBy, limit, getDocs 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // === DÁN CẤU HÌNH FIREBASE CỦA BẠN VÀO ĐÂY ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3HPISCYt5_AF7n4woe0c-UzLwwtjemVo",
+            authDomain: "luye-4b2b6.firebaseapp.com",
+            projectId: "luye-4b2b6",
+            storageBucket: "luye-4b2b6.firebasestorage.app",
+            messagingSenderId: "951637756921",
+            appId: "1:951637756921:web:3c90fe85d6ae498e014b28",
+            measurementId: "G-P73T7N3FRZ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.doc = doc;
+        window.getDoc = getDoc;
+        window.setDoc = setDoc;
+        window.updateDoc = updateDoc;
+        window.increment = increment;
+        window.collection = collection;
+        window.query = query;
+        window.orderBy = orderBy;
+        window.limit = limit;
+        window.getDocs = getDocs;
+
+        document.getElementById('btnStartQuiz').addEventListener('click', handleStartQuiz);
+        document.getElementById('btnOpenLeaderboard').addEventListener('click', openLeaderboard);
+    </script>
+
+    <script>
         let currentUser = "", currentPin = "";
         let currentA = 0, currentB = 0, currentOp = '+';
         let rawDigits = []; 
@@ -406,27 +435,14 @@
         const btnSubmitEl = document.getElementById("btnSubmit");
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // Cập nhật tên/mã PIN từ LocalStorage
         window.onload = () => {
             document.getElementById('usernameInput').value = localStorage.getItem('toan_username') || '';
             document.getElementById('pinInput').value = localStorage.getItem('toan_pin') || '';
         };
 
-        async function fetchAPI(payload) {
-            try {
-                const res = await fetch(SCRIPT_URL, {
-                    method: "POST",
-                    body: JSON.stringify(payload)
-                });
-                return await res.json();
-            } catch (e) {
-                console.error("API Error:", e);
-                return { status: "error", message: "Lỗi kết nối máy chủ!" };
-            }
-        }
-
+        // --- XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ VỚI FIREBASE ---
         async function handleStartQuiz() {
-            const username = document.getElementById('usernameInput').value.trim();
+            const username = document.getElementById('usernameInput').value.trim().toLowerCase();
             const pin = document.getElementById('pinInput').value.trim();
 
             if (!username || !pin) {
@@ -434,41 +450,71 @@
                 return;
             }
 
-            // Gọi API xác thực tài khoản
-            const res = await fetchAPI({ action: "login", username, pin });
-            if (res.status === "error") {
-                alert(res.message);
-                return;
+            try {
+                const userRef = window.doc(window.db, "users", username);
+                const userSnap = await window.getDoc(userRef);
+
+                if (userSnap.exists()) {
+                    // Đã có tài khoản -> Kiểm tra PIN
+                    if (userSnap.data().pin !== pin) {
+                        alert("Mã PIN không chính xác!");
+                        return;
+                    }
+                } else {
+                    // Chưa có tài khoản -> Tự động tạo mới
+                    await window.setDoc(userRef, {
+                        username: username,
+                        pin: pin,
+                        correctCount: 0,
+                        totalQuestions: 0,
+                        createdAt: new Date()
+                    });
+                }
+
+                currentUser = username;
+                currentPin = pin;
+                localStorage.setItem('toan_username', username);
+                localStorage.setItem('toan_pin', pin);
+
+                startQuiz();
+            } catch (err) {
+                console.error("Firebase Auth Error:", err);
+                alert("Lỗi kết nối CSDL!");
             }
-
-            currentUser = username;
-            currentPin = pin;
-            localStorage.setItem('toan_username', username);
-            localStorage.setItem('toan_pin', pin);
-
-            startQuiz();
         }
 
+        // --- LẤY BẢNG XẾP HẠNG TOP 10 ---
         async function openLeaderboard() {
             document.getElementById('leaderboardModal').style.display = 'flex';
             document.getElementById('leaderboardContent').innerHTML = 'Đang tải dữ liệu...';
             
-            const res = await fetchAPI({ action: "getLeaderboard" });
-            if (res.status === "success") {
+            try {
+                const q = window.query(
+                    window.collection(window.db, "users"), 
+                    window.orderBy("correctCount", "desc"), 
+                    window.limit(10)
+                );
+                
+                const querySnapshot = await window.getDocs(q);
                 let html = '<table class="leaderboard-table"><tr><th>Hạng</th><th>Tên</th><th>Đúng</th></tr>';
-                res.data.forEach((item, index) => {
-                    html += `<tr><td>#${index + 1}</td><td><b>${item.username}</b></td><td>${item.correct}</td></tr>`;
+                
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    html += `<tr><td>#${rank++}</td><td><b>${data.username}</b></td><td>${data.correctCount || 0}</td></tr>`;
                 });
+                
                 html += '</table>';
                 document.getElementById('leaderboardContent').innerHTML = html;
-            } else {
+            } catch (err) {
+                console.error("Leaderboard Error:", err);
                 document.getElementById('leaderboardContent').innerHTML = 'Lỗi tải bảng xếp hạng!';
             }
         }
 
         function closeLeaderboard() { document.getElementById('leaderboardModal').style.display = 'none'; }
 
-        /* --- GIỌNG ĐỌC --- */
+        /* --- GIỌNG ĐỌC & ÂM THANH --- */
         let selectedVietnameseVoice = null;
         function loadVietnameseVoice() {
             if (!('speechSynthesis' in window)) return;
@@ -489,7 +535,6 @@
             const msg = new SpeechSynthesisUtterance(text);
             msg.lang = 'vi-VN';
             if (selectedVietnameseVoice) msg.voice = selectedVietnameseVoice;
-
             msg.rate = 0.88; msg.pitch = 1.1; 
             window.speechSynthesis.speak(msg);
         }
@@ -592,16 +637,18 @@
             renderResultLists();
             document.getElementById('resultModal').style.display = 'flex';
 
-            // Đồng bộ điểm lên Google Sheets
-            if (currentUser && SCRIPT_URL !== "DÁN_URL_WEB_APP_CỦA_BẠN_VÀO_ĐÂY") {
-                fetchAPI({
-                    action: "saveScore",
-                    username: currentUser,
-                    pin: currentPin,
-                    correct: correctQuestions,
-                    total: totalQuestions,
-                    timeSeconds: totalSeconds
-                });
+            // CỘNG DỒN ĐIỂM VÀO FIREBASE
+            if (currentUser) {
+                try {
+                    const userRef = window.doc(window.db, "users", currentUser);
+                    await window.updateDoc(userRef, {
+                        correctCount: window.increment(correctQuestions),
+                        totalQuestions: window.increment(totalQuestions),
+                        lastUpdated: new Date()
+                    });
+                } catch (e) {
+                    console.error("Error updating score:", e);
+                }
             }
         }
 
@@ -626,9 +673,7 @@
             }
         }
 
-        function closeResult() {
-            document.getElementById('resultModal').style.display = 'none';
-        }
+        function closeResult() { document.getElementById('resultModal').style.display = 'none'; }
 
         function quitQuiz() {
             clearInterval(timerInterval);
