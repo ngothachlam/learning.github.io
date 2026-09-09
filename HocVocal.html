@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ứng Dụng Học Từ Vựng Excel (Anh / Pháp)</title>
+    <!-- Thư viện SheetJS đọc file Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f0f9ff;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+        }
+        .card {
+            background: white;
+            width: 100%;
+            max-width: 650px;
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            box-sizing: border-box;
+            position: relative;
+        }
+        h2 { margin-top: 0; color: #0284c7; font-size: 18px; text-align: center; }
+        
+        select, input[type="text"], input[type="number"] {
+            padding: 8px 10px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+        select:focus, input:focus { border-color: #0284c7; }
+        
+        .btn {
+            font-size: 15px;
+            font-weight: bold;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 10px;
+            background: #0284c7;
+            color: white;
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .btn-home { background: #64748b; font-size: 18px; padding: 6px 12px; }
+        .btn-audio { background: #0ea5e9; font-size: 22px; padding: 6px 12px; }
+        .btn-meaning { background: #f59e0b; font-size: 12px; padding: 6px 10px; }
+        .btn-danger { background: #ef4444; font-size: 13px; padding: 6px 10px; }
+        .btn-reset { background: #f97316; font-size: 12px; padding: 4px 10px; border-radius: 6px; }
+
+        /* MÀN HÌNH HOME */
+        .home-screen { display: block; text-align: center; }
+        .home-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .home-card-btn {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            color: #1e293b;
+            transition: all 0.2s;
+        }
+        .home-card-btn:hover { background: #e0f2fe; border-color: #0284c7; }
+        .home-card-btn .icon { font-size: 32px; }
+
+        /* MÀN HÌNH NHẬP DỮ LIỆU EXCEL */
+        .setup-screen { display: none; }
+        .excel-upload-zone {
+            border: 2px dashed #0284c7;
+            background: #f0f9ff;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .excel-upload-zone input[type="file"] { display: none; }
+        .excel-upload-btn {
+            background: #0284c7; color: white; padding: 10px 16px; border-radius: 8px;
+            font-weight: bold; cursor: pointer; display: inline-block; margin-top: 8px;
+        }
+
+        /* MÀN HÌNH SETTING */
+        .setting-screen { display: none; }
+        .setting-group {
+            background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px;
+            border-radius: 10px; margin-bottom: 12px; text-align: left;
+        }
+        .setting-group label { display: block; font-weight: bold; font-size: 14px; margin-bottom: 6px; color: #334155; }
+        .setting-group input { width: 100%; box-sizing: border-box; }
+
+        /* MÀN HÌNH HỌC & LUYỆN TẬP */
+        .learn-screen, .practice-screen { display: none; }
+        .top-nav-bar {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+        }
+        .mode-container {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f1f5f9; padding: 6px 12px; border-radius: 8px; margin-bottom: 12px;
+            gap: 8px; flex-wrap: wrap;
+        }
+        .mode-container select { padding: 4px 8px; font-size: 13px; border-radius: 6px; }
+        .toggle-option {
+            display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: bold; color: #334155; cursor: pointer;
+        }
+        .row-learn { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .word-container { flex-grow: 1; text-align: center; padding: 0 4px; }
+        .main-text { font-size: 26px; font-weight: bold; color: #1e293b; line-height: 1.2; }
+        
+        /* CHI TIẾT BÀI HỌC */
+        .sub-details-container {
+            margin-top: 10px; text-align: left; background: #f8fafc; padding: 12px;
+            border-radius: 10px; border: 1px solid #e2e8f0; font-size: 14px; visibility: hidden;
+        }
+        .tag-badge {
+            display: inline-block; padding: 2px 6px; background: #e0f2fe; color: #0369a1;
+            font-weight: bold; border-radius: 4px; font-size: 12px; margin-right: 6px;
+        }
+        .ipa-text { font-family: monospace; color: #d97706; font-weight: bold; }
+        .meaning-text { font-size: 16px; font-weight: bold; color: #16a34a; margin: 6px 0; }
+        .example-box { background: #fff; padding: 8px; border-left: 3px solid #0284c7; margin: 6px 0; border-radius: 4px; }
+        .example-en { font-weight: 600; color: #1e293b; }
+        .example-vi { color: #64748b; font-size: 13px; margin-top: 2px; }
+        .word-family-box { font-size: 12px; color: #475569; background: #f1f5f9; padding: 6px; border-radius: 4px; margin-top: 6px; }
+
+        .practice-input-group { display: flex; gap: 8px; margin: 16px 0; }
+        .practice-input-group input { flex: 1; font-size: 16px; }
+        .feedback-msg { font-weight: bold; font-size: 15px; text-align: center; min-height: 22px; margin-bottom: 12px; }
+        .feedback-correct { color: #16a34a; }
+        .feedback-wrong { color: #dc2626; }
+
+        .score-board {
+            display: flex; justify-content: space-around; align-items: center;
+            background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;
+            margin-bottom: 12px; font-size: 14px; font-weight: bold;
+        }
+        .score-correct { color: #16a34a; }
+        .score-wrong { color: #dc2626; }
+        .wrong-list-container { max-height: 160px; overflow-y: auto; border-top: 1px solid #e2e8f0; padding-top: 8px; font-size: 13px; }
+        .wrong-list-title { font-weight: bold; color: #dc2626; margin-bottom: 6px; }
+        .wrong-item { background: #fef2f2; border: 1px solid #fecaca; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; color: #991b1b; }
+        .wrong-user-input { color: #dc2626; font-weight: 600; text-decoration: line-through; margin-left: 4px; }
+        .wrong-correct-answer { color: #16a34a; font-weight: 600; margin-left: 4px; }
+
+        .row-status {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 12px; padding-top: 8px; border-top: 1px solid #f1f5f9;
+            font-size: 13px; color: #64748b; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <!-- MÀN HÌNH HOME -->
+        <div id="homeScreen" class="home-screen">
+            <h2>Học Từ Vựng Excel Multi-Language</h2>
+            <div class="home-grid">
+                <div class="home-card-btn" onclick="navTo('setupScreen')">
+                    <span class="icon">📊</span>
+                    <span>Nạp File Excel</span>
+                </div>
+                <div class="home-card-btn" onclick="startLearningFromHome()">
+                    <span class="icon">🚀</span>
+                    <span>Bắt Đầu Học</span>
+                </div>
+                <div class="home-card-btn" onclick="startPracticeFromHome()">
+                    <span class="icon">✍️</span>
+                    <span>Luyện Tập</span>
+                </div>
+                <div class="home-card-btn" onclick="navTo('settingScreen')">
+                    <span class="icon">⚙️</span>
+                    <span>Cài Đặt</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÀN HÌNH NHẬP DỮ LIỆU EXCEL -->
+        <div id="setupScreen" class="setup-screen">
+            <div class="top-nav-bar">
+                <button class="btn btn-home" onclick="navTo('homeScreen')">🏠</button>
+                <h2 style="margin:0;">Nạp File Excel</h2>
+                <div style="width: 40px;"></div>
+            </div>
+            
+            <div class="excel-upload-zone">
+                <div style="font-size: 40px;">📁</div>
+                <div style="font-weight: bold; margin-top: 4px;">Chọn file Excel (.xlsx / .xls)</div>
+                
+                <!-- TÙY CHỌN NGÔN NGỮ MẶC ĐỊNH KHI NẠP EXCEL -->
+                <div style="margin-top: 10px; font-size: 13px; font-weight: bold;">
+                    <label for="defaultLangSelect">🌐 Ngôn ngữ mặc định cho file:</label>
+                    <select id="defaultLangSelect" style="margin-left: 4px; padding: 4px 8px;">
+                        <option value="en-US">🇬🇧 Tiếng Anh (English)</option>
+                        <option value="fr-FR">🇫🇷 Tiếng Pháp (Français)</option>
+                    </select>
+                </div>
+
+                <div style="font-size: 11px; color: #64748b; margin-top: 6px;">(Hệ thống tự nhận diện cột 'Language' nếu file có sẵn)</div>
+                
+                <label class="excel-upload-btn">
+                    Tải File Đổi Dữ Liệu
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" onchange="handleExcelUpload(event)">
+                </label>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 12px;">
+                <label style="font-weight: bold;">Danh sách bài đã lưu:</label>
+                <select id="lessonSelect" style="width: 100%; margin-top: 6px; font-weight: bold;"></select>
+            </div>
+            <button class="btn btn-danger" style="width: 100%;" onclick="deleteAllLessons()">🗑️ Xóa toàn bộ dữ liệu đã lưu</button>
+        </div>
+
+        <!-- MÀN HÌNH SETTING -->
+        <div id="settingScreen" class="setting-screen">
+            <div class="top-nav-bar">
+                <button class="btn btn-home" onclick="navTo('homeScreen')">🏠</button>
+                <h2 style="margin:0;">Cài Đặt Tham Số</h2>
+                <div style="width: 40px;"></div>
+            </div>
+
+            <div class="setting-group">
+                <label for="delayXInput">Thời gian chờ sau khi đọc xong từ chính (X giây):</label>
+                <input type="number" id="delayXInput" min="1" value="5" onchange="saveSettings()">
+            </div>
+
+            <div class="setting-group">
+                <label for="delayYInput">Thời gian chờ sau khi đọc xong đáp án (Y giây):</label>
+                <input type="number" id="delayYInput" min="1" value="3" onchange="saveSettings()">
+            </div>
+        </div>
+        
+        <!-- MÀN HÌNH HỌC -->
+        <div id="learnScreen" class="learn-screen">
+            <div class="top-nav-bar">
+                <button class="btn btn-home" onclick="navTo('homeScreen')">🏠</button>
+                <select id="learnLessonSelect" onchange="switchLessonInLearnMode()" style="font-weight: bold; flex: 1; margin: 0 10px;"></select>
+                <label class="toggle-option">
+                    <input type="checkbox" id="reverseModeCheck" onchange="toggleReverseMode()"> Đảo
+                </label>
+            </div>
+
+            <div class="mode-container">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size: 13px; font-weight: bold; color: #334155;">Auto:</span>
+                    <select id="autoModeSelect" onchange="changeAutoMode()">
+                        <option value="OFF">Tắt Auto</option>
+                        <option value="LESSON">Auto Trong Bài</option>
+                        <option value="ALL">Auto Toàn Bộ</option>
+                    </select>
+                </div>
+
+                <label class="toggle-option">
+                    <input type="checkbox" id="sequentialModeCheck" onchange="toggleSequentialMode()"> Nối tiếp (Tuần tự)
+                </label>
+            </div>
+
+            <div class="row-learn">
+                <!-- Nút Lùi (<) -->
+                <button class="btn" id="btnPrevWord" onclick="prevWordManual()" title="Từ trước đó" style="font-size: 18px; padding: 0 16px;">❮</button>
+
+                <button class="btn btn-audio" onclick="speakCurrentWord(null)" title="Nghe phát âm">🔊</button>
+                
+                <div class="word-container">
+                    <div class="main-text" id="mainText">...</div>
+                </div>
+                
+                <!-- Nút Tiến (>) -->
+                <button class="btn" id="btnNextWord" onclick="nextWordManual()" title="Từ tiếp theo" style="font-size: 18px; padding: 0 16px;">❯</button>
+            </div>
+
+            <!-- CHI TIẾT TỪ VỰNG KHI MỞ ĐÁP ÁN -->
+            <div id="subDetailsContainer" class="sub-details-container">
+                <div>
+                    <span id="posBadge" class="tag-badge">Verb</span>
+                    <span id="cefrBadge" class="tag-badge" style="background:#dcfce7; color:#15803d;">B1</span>
+                    <span id="ipaText" class="ipa-text">/prəˈdjuːs/</span>
+                    <span id="langBadge" class="tag-badge" style="background:#fef3c7; color:#b45309; float:right;">EN</span>
+                </div>
+                <div id="meaningText" class="meaning-text">nông sản / sản xuất</div>
+                
+                <div id="exampleBox" class="example-box">
+                    <div id="exampleEn" class="example-en">Example sentence...</div>
+                    <div id="exampleVi" class="example-vi">Dịch câu ví dụ...</div>
+                </div>
+
+                <div id="wordFamilyBox" class="word-family-box">
+                    <strong>Word Family:</strong> <span id="wordFamilyText">...</span>
+                </div>
+            </div>
+            
+            <div class="row-status">
+                <span id="counterText">Từ 1 / 1</span>
+                <button class="btn btn-meaning" id="btnMeaning" onclick="toggleSubText()">👁️ Xem đáp án</button>
+            </div>
+        </div>
+
+        <!-- MÀN HÌNH LUYỆN TẬP -->
+        <div id="practiceScreen" class="practice-screen">
+            <div class="top-nav-bar">
+                <button class="btn btn-home" onclick="navTo('homeScreen')">🏠</button>
+                <select id="practiceLessonSelect" onchange="switchLessonInPracticeMode()" style="font-weight: bold; flex: 1; margin: 0 10px;"></select>
+                <span id="practiceCounterText" style="font-size: 13px; font-weight: bold; color: #475569;">Từ 1 / 1</span>
+            </div>
+
+            <div class="mode-container" style="margin-bottom: 12px;">
+                <span style="font-size: 13px; font-weight: bold; color: #334155;">Chế độ:</span>
+                <select id="practiceModeSelect" onchange="changePracticeMode()" style="flex: 1; margin-left: 4px;">
+                    <option value="FOREIGN_TO_VIE">Ngoại Ngữ ➔ Tiếng Việt</option>
+                    <option value="VIE_TO_FOREIGN">Tiếng Việt ➔ Ngoại Ngữ</option>
+                </select>
+                
+                <label class="toggle-option" style="margin-left: 8px;">
+                    <input type="checkbox" id="practiceSequentialCheck" onchange="togglePracticeSequential()"> Tuần tự
+                </label>
+            </div>
+
+            <div class="row-learn">
+                <div class="word-container">
+                    <div class="main-text" id="practiceMainText">...</div>
+                </div>
+
+                <button class="btn btn-audio" id="btnPracticeAudio" onclick="speakPracticeWord()" title="Nghe phát âm">🔊</button>
+            </div>
+
+            <div class="practice-input-group">
+                <input type="text" id="practiceAnswerInput" placeholder="Nhập đáp án tại đây..." onkeyup="handlePracticeKeyUp(event)">
+                <button class="btn" id="btnCheckAnswer" onclick="checkAnswer()">Check</button>
+            </div>
+
+            <div id="feedbackMsg" class="feedback-msg"></div>
+
+            <div class="score-board">
+                <span class="score-correct">Đúng: <span id="correctCount">0</span></span>
+                <span class="score-wrong">Sai: <span id="wrongCount">0</span></span>
+                <button class="btn btn-reset" onclick="resetPracticeStats()" title="Xóa kết quả bài này">🔄 Reset bài này</button>
+            </div>
+
+            <div class="wrong-list-container">
+                <div class="wrong-list-title">Danh sách các từ nhập sai:</div>
+                <div id="wrongList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'VOCAB_EXCEL_APP_V2';
+        let store = {
+            activeLessonId: null,
+            settings: { delayX: 5, delayY: 3 },
+            lessons: {}
+        };
+
+        /* State Màn hình Học */
+        let rawWordList = [];
+        let currentWordList = [];
+        let currentWordIndex = 0;
+        let isSubTextVisible = false;
+        let isReverseMode = false;
+        let isSequential = false;
+        let autoMode = 'OFF';
+        let autoTimer1 = null, autoTimer2 = null;
+
+        /* State Màn hình Luyện tập */
+        let practiceRawList = [];
+        let practiceWordList = [];
+        let practiceIndex = 0;
+        let practiceMode = 'FOREIGN_TO_VIE';
+        let isPracticeSequential = false;
+        let isChecking = false;
+
+        window.onload = function() {
+            loadFromStorage();
+            initSettingsUI();
+            renderLessonSelects();
+        };
+
+        function navTo(screenId) {
+            clearAutoTimers();
+            window.speechSynthesis.cancel();
+
+            ['homeScreen', 'setupScreen', 'settingScreen', 'learnScreen', 'practiceScreen'].forEach(id => {
+                document.getElementById(id).style.display = (id === screenId) ? 'block' : 'none';
+            });
+        }
+
+        function saveToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+        }
+
+        function loadFromStorage() {
+            let data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                try {
+                    store = JSON.parse(data);
+                    if (!store.settings) store.settings = { delayX: 5, delayY: 3 };
+                } catch(e) { store = { activeLessonId: null, settings: { delayX: 5, delayY: 3 }, lessons: {} }; }
+            }
+        }
+
+        function initSettingsUI() {
+            document.getElementById('delayXInput').value = store.settings.delayX || 5;
+            document.getElementById('delayYInput').value = store.settings.delayY || 3;
+        }
+
+        function saveSettings() {
+            let x = parseInt(document.getElementById('delayXInput').value) || 5;
+            let y = parseInt(document.getElementById('delayYInput').value) || 3;
+            store.settings = { delayX: Math.max(1, x), delayY: Math.max(1, y) };
+            saveToStorage();
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function getEmptyPracticeStats() {
+            return {
+                FOREIGN_TO_VIE: { correct: 0, wrong: 0, wrongItems: [] },
+                VIE_TO_FOREIGN: { correct: 0, wrong: 0, wrongItems: [] }
+            };
+        }
+
+        /* --- XỬ LÝ ĐỌC FILE EXCEL CÓ HỖ TRỢ NGÔN NGỮ --- */
+        function handleExcelUpload(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+
+            let defaultLang = document.getElementById('defaultLangSelect').value || 'en-US';
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = new Uint8Array(e.target.result);
+                    let workbook = XLSX.read(data, { type: 'array' });
+
+                    let targetSheetName = workbook.SheetNames.find(name => 
+                        name.toLowerCase().includes('vocabulary') || name.toLowerCase().includes('master list')
+                    ) || workbook.SheetNames[0];
+
+                    let selectedSheet = workbook.Sheets[targetSheetName];
+                    let jsonData = XLSX.utils.sheet_to_json(selectedSheet, { header: 1, defval: "" });
+
+                    parseExcelData(jsonData, defaultLang);
+                } catch (err) {
+                    console.error("Lỗi khi đọc file Excel:", err);
+                    alert("Có lỗi xảy ra khi đọc file Excel!");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseExcelData(rows, defaultLang) {
+            if (!rows || rows.length === 0) {
+                alert("File Excel rỗng hoặc không đọc được dữ liệu!");
+                return;
+            }
+
+            let headerRowIndex = -1;
+
+            for (let i = 0; i < rows.length; i++) {
+                if (!rows[i] || !Array.isArray(rows[i])) continue;
+                let rowStr = rows[i].map(c => String(c || '').toLowerCase()).join(' ');
+                if (rowStr.includes('vocabulary') && rowStr.includes('meaning')) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+
+            if (headerRowIndex === -1) {
+                alert("Không tìm thấy dòng chứa cột 'Vocabulary / Phrase' và 'Vietnamese Meaning'!");
+                return;
+            }
+
+            let headers = rows[headerRowIndex].map(h => String(h || '').trim());
+            let getColIdx = (keyword) => headers.findIndex(h => h.toLowerCase().includes(keyword.toLowerCase()));
+
+            let dayIdx = getColIdx('day');
+            let vocabIdx = getColIdx('vocab');
+            let posIdx = getColIdx('speech');
+            let cefrIdx = getColIdx('cefr');
+            let ipaIdx = getColIdx('pronunciation');
+            let meaningIdx = getColIdx('meaning');
+            let exEnIdx = getColIdx('example'); 
+            let exViIdx = getColIdx('translation');
+            let familyIdx = getColIdx('word family');
+            let langIdx = getColIdx('lang'); // Tìm cột ngôn ngữ trong Excel
+
+            if (vocabIdx === -1 || meaningIdx === -1) {
+                alert("Không tìm thấy cột Từ vựng hoặc Nghĩa tiếng Việt!");
+                return;
+            }
+
+            let tempLessons = {};
+            let totalParsedCount = 0;
+
+            for (let i = headerRowIndex + 1; i < rows.length; i++) {
+                let r = rows[i];
+                if (!r || r.length === 0) continue;
+
+                let vocab = String(r[vocabIdx] || '').trim();
+                let meaning = String(r[meaningIdx] || '').trim();
+
+                if (!vocab || !meaning) continue;
+
+                let dayName = (dayIdx !== -1 && r[dayIdx]) ? String(r[dayIdx]).trim() : 'Bài chung';
+
+                // Xác định ngôn ngữ từ vựng (Tiếng Pháp / Tiếng Anh)
+                let itemLang = defaultLang;
+                if (langIdx !== -1 && r[langIdx]) {
+                    let lVal = String(r[langIdx]).toLowerCase().trim();
+                    if (lVal.includes('fr') || lVal.includes('pháp') || lVal.includes('french')) {
+                        itemLang = 'fr-FR';
+                    } else if (lVal.includes('en') || lVal.includes('anh') || lVal.includes('english')) {
+                        itemLang = 'en-US';
+                    }
+                }
+
+                let item = {
+                    word: vocab,
+                    meaning: meaning,
+                    pos: posIdx !== -1 ? String(r[posIdx] || '').trim() : '',
+                    cefr: cefrIdx !== -1 ? String(r[cefrIdx] || '').trim() : '',
+                    ipa: ipaIdx !== -1 ? String(r[ipaIdx] || '').trim() : '',
+                    exampleEn: exEnIdx !== -1 ? String(r[exEnIdx] || '').trim() : '',
+                    exampleVi: exViIdx !== -1 ? String(r[exViIdx] || '').trim() : '',
+                    wordFamily: familyIdx !== -1 ? String(r[familyIdx] || '').trim() : '',
+                    lang: itemLang
+                };
+
+                if (!tempLessons[dayName]) tempLessons[dayName] = [];
+                tempLessons[dayName].push(item);
+                totalParsedCount++;
+            }
+
+            if (totalParsedCount === 0) {
+                alert("Không tìm thấy dòng từ vựng hợp lệ nào!");
+                return;
+            }
+
+            Object.keys(tempLessons).forEach(dayKey => {
+                let lessonId = 'lesson_' + dayKey.replace(/\s+/g, '_').toLowerCase();
+                store.lessons[lessonId] = {
+                    title: dayKey,
+                    items: tempLessons[dayKey],
+                    practiceStats: store.lessons[lessonId]?.practiceStats || getEmptyPracticeStats()
+                };
+            });
+
+            let firstLessonKey = Object.keys(store.lessons)[0];
+            if (firstLessonKey) store.activeLessonId = firstLessonKey;
+
+            saveToStorage();
+            renderLessonSelects();
+            alert(`Đã nạp thành công ${totalParsedCount} từ vựng (${Object.keys(tempLessons).length} bài học)!`);
+        }
+
+        function renderLessonSelects() {
+            let select1 = document.getElementById('lessonSelect');
+            let select2 = document.getElementById('learnLessonSelect');
+            let select3 = document.getElementById('practiceLessonSelect');
+            select1.innerHTML = ''; select2.innerHTML = ''; select3.innerHTML = '';
+
+            let lessonKeys = Object.keys(store.lessons);
+            if (lessonKeys.length === 0) {
+                let opt = document.createElement('option');
+                opt.value = ''; opt.innerText = '-- Chưa có dữ liệu --';
+                select1.appendChild(opt);
+                return;
+            }
+
+            lessonKeys.sort((a, b) => (store.lessons[a].title || '').localeCompare(store.lessons[b].title || '', 'vi', { numeric: true }));
+
+            lessonKeys.forEach(id => {
+                let lesson = store.lessons[id];
+                let count = lesson.items ? lesson.items.length : 0;
+                
+                let createOpt = () => {
+                    let opt = document.createElement('option');
+                    opt.value = id; opt.innerText = `📖 ${lesson.title} (${count} từ)`;
+                    if (id === store.activeLessonId) opt.selected = true;
+                    return opt;
+                };
+
+                select1.appendChild(createOpt());
+                select2.appendChild(createOpt());
+                select3.appendChild(createOpt());
+            });
+        }
+
+        function deleteAllLessons() {
+            if (confirm("Bạn có chắc chắn muốn xóa toàn bộ từ vựng đã nạp?")) {
+                store.lessons = {};
+                store.activeLessonId = null;
+                saveToStorage();
+                renderLessonSelects();
+            }
+        }
+
+        /* --- MÀN HÌNH HỌC --- */
+        function startLearningFromHome() {
+            if (!store.activeLessonId || !store.lessons[store.activeLessonId]) {
+                alert("Vui lòng nạp file Excel trước!");
+                navTo('setupScreen');
+                return;
+            }
+            navTo('learnScreen');
+            renderLessonSelects();
+            loadWordListForActiveLesson();
+        }
+
+        function switchLessonInLearnMode() {
+            let sel = document.getElementById('learnLessonSelect');
+            store.activeLessonId = sel.value;
+            saveToStorage();
+            loadWordListForActiveLesson();
+        }
+
+        function loadWordListForActiveLesson() {
+            let active = store.lessons[store.activeLessonId];
+            if (!active || !active.items || active.items.length === 0) return;
+
+            rawWordList = active.items;
+            prepareCurrentWordList();
+            currentWordIndex = 0;
+            showWord();
+        }
+
+        function prepareCurrentWordList() {
+            currentWordList = [...rawWordList];
+            if (!isSequential) shuffleArray(currentWordList);
+        }
+
+        function toggleSequentialMode() {
+            isSequential = document.getElementById('sequentialModeCheck').checked;
+            prepareCurrentWordList();
+            currentWordIndex = 0;
+            showWord();
+        }
+
+        function toggleReverseMode() {
+            isReverseMode = document.getElementById('reverseModeCheck').checked;
+            showWord();
+        }
+
+        function changeAutoMode() {
+            autoMode = document.getElementById('autoModeSelect').value;
+            showWord();
+        }
+
+        function showWord() {
+            clearAutoTimers();
+            if (currentWordList.length === 0) return;
+
+            if (currentWordIndex < 0) currentWordIndex = 0;
+            if (currentWordIndex >= currentWordList.length) currentWordIndex = currentWordList.length - 1;
+
+            let item = currentWordList[currentWordIndex];
+
+            let mainEl = document.getElementById('mainText');
+            let detailsContainer = document.getElementById('subDetailsContainer');
+
+            mainEl.innerText = isReverseMode ? item.meaning : item.word;
+            mainEl.style.color = isReverseMode ? '#16a34a' : '#1e293b';
+
+            document.getElementById('counterText').innerText = `Từ ${currentWordIndex + 1} / ${currentWordList.length}`;
+            isSubTextVisible = false;
+            detailsContainer.style.visibility = 'hidden';
+
+            document.getElementById('btnPrevWord').disabled = (currentWordIndex === 0);
+            document.getElementById('btnNextWord').disabled = (currentWordIndex === currentWordList.length - 1);
+
+            document.getElementById('posBadge').innerText = item.pos || 'Form';
+            document.getElementById('cefrBadge').innerText = item.cefr || 'Level';
+            document.getElementById('ipaText').innerText = item.ipa ? `/${item.ipa}/` : '';
+            document.getElementById('langBadge').innerText = (item.lang === 'fr-FR') ? 'FR 🇫🇷' : 'EN 🇬🇧';
+            document.getElementById('meaningText').innerText = isReverseMode ? item.word : item.meaning;
+            
+            document.getElementById('exampleEn').innerText = item.exampleEn || 'Chưa có câu ví dụ';
+            document.getElementById('exampleVi').innerText = item.exampleVi || '';
+            document.getElementById('wordFamilyText').innerText = item.wordFamily || 'Không có';
+
+            speakCurrentWord(() => {
+                if (autoMode !== 'OFF') {
+                    let delayX = (store.settings.delayX || 5) * 1000;
+                    autoTimer1 = setTimeout(() => {
+                        isSubTextVisible = true;
+                        detailsContainer.style.visibility = 'visible';
+                        
+                        speakAnswerWord(() => {
+                            let delayY = (store.settings.delayY || 3) * 1000;
+                            autoTimer2 = setTimeout(() => {
+                                nextWordAuto();
+                            }, delayY);
+                        });
+                    }, delayX);
+                }
+            });
+        }
+
+        function clearAutoTimers() {
+            if (autoTimer1) clearTimeout(autoTimer1);
+            if (autoTimer2) clearTimeout(autoTimer2);
+        }
+
+        function toggleSubText() {
+            let detailsContainer = document.getElementById('subDetailsContainer');
+            isSubTextVisible = !isSubTextVisible;
+            detailsContainer.style.visibility = isSubTextVisible ? 'visible' : 'hidden';
+            if (isSubTextVisible) speakAnswerWord(null);
+        }
+
+        function prevWordManual() {
+            clearAutoTimers();
+            if (currentWordIndex > 0) {
+                currentWordIndex--;
+                showWord();
+            }
+        }
+
+        function nextWordManual() {
+            clearAutoTimers();
+            nextWordLogic();
+        }
+
+        function nextWordAuto() {
+            nextWordLogic();
+        }
+
+        function nextWordLogic() {
+            if (currentWordIndex < currentWordList.length - 1) {
+                currentWordIndex++;
+                showWord();
+            } else if (autoMode === 'ALL') {
+                let keys = Object.keys(store.lessons);
+                let curIdx = keys.indexOf(store.activeLessonId);
+                if (curIdx !== -1 && curIdx < keys.length - 1) {
+                    store.activeLessonId = keys[curIdx + 1];
+                    document.getElementById('learnLessonSelect').value = store.activeLessonId;
+                    saveToStorage();
+                    loadWordListForActiveLesson();
+                }
+            }
+        }
+
+        function speakCurrentWord(onEndCallback) {
+            if (!currentWordList[currentWordIndex]) return;
+            let item = currentWordList[currentWordIndex];
+            let text = isReverseMode ? item.meaning : item.word;
+            let lang = isReverseMode ? 'vi-VN' : (item.lang || 'en-US');
+            speakText(text, lang, onEndCallback);
+        }
+
+        function speakAnswerWord(onEndCallback) {
+            if (!currentWordList[currentWordIndex]) return;
+            let item = currentWordList[currentWordIndex];
+            let text = isReverseMode ? item.word : item.meaning;
+            let lang = isReverseMode ? (item.lang || 'en-US') : 'vi-VN';
+            speakText(text, lang, onEndCallback);
+        }
+
+        function speakText(text, lang, onEndCallback) {
+            window.speechSynthesis.cancel();
+            if (!text) { if (onEndCallback) onEndCallback(); return; }
+            let u = new SpeechSynthesisUtterance(text);
+            u.lang = lang;
+            u.onend = function() { if (onEndCallback) onEndCallback(); };
+            u.onerror = function() { if (onEndCallback) onEndCallback(); };
+            window.speechSynthesis.speak(u);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            let learnScreen = document.getElementById('learnScreen');
+            if (learnScreen && learnScreen.style.display === 'block') {
+                if (e.key === 'ArrowLeft') {
+                    prevWordManual();
+                } else if (e.key === 'ArrowRight') {
+                    nextWordManual();
+                }
+            }
+        });
+
+        /* --- MÀN HÌNH LUYỆN TẬP --- */
+        function startPracticeFromHome() {
+            if (!store.activeLessonId || !store.lessons[store.activeLessonId]) {
+                alert("Vui lòng nạp file Excel trước!");
+                navTo('setupScreen');
+                return;
+            }
+            navTo('practiceScreen');
+            renderLessonSelects();
+            loadPracticeWordList();
+        }
+
+        function switchLessonInPracticeMode() {
+            let sel = document.getElementById('practiceLessonSelect');
+            store.activeLessonId = sel.value;
+            saveToStorage();
+            loadPracticeWordList();
+        }
+
+        function loadPracticeWordList() {
+            let active = store.lessons[store.activeLessonId];
+            if (!active || !active.items || active.items.length === 0) return;
+
+            practiceRawList = active.items;
+            preparePracticeWordList();
+            practiceIndex = 0;
+            renderPracticeWord();
+            renderPracticeStats();
+        }
+
+        function preparePracticeWordList() {
+            practiceWordList = [...practiceRawList];
+            if (!isPracticeSequential) shuffleArray(practiceWordList);
+        }
+
+        function togglePracticeSequential() {
+            isPracticeSequential = document.getElementById('practiceSequentialCheck').checked;
+            preparePracticeWordList();
+            practiceIndex = 0;
+            renderPracticeWord();
+        }
+
+        function changePracticeMode() {
+            practiceMode = document.getElementById('practiceModeSelect').value;
+            practiceIndex = 0;
+            renderPracticeWord();
+            renderPracticeStats();
+        }
+
+        function renderPracticeWord() {
+            if (practiceWordList.length === 0) return;
+            let item = practiceWordList[practiceIndex];
+            
+            let mainEl = document.getElementById('practiceMainText');
+            mainEl.innerText = (practiceMode === 'FOREIGN_TO_VIE') ? item.word : item.meaning;
+
+            document.getElementById('practiceCounterText').innerText = `Từ ${practiceIndex + 1} / ${practiceWordList.length}`;
+            
+            let input = document.getElementById('practiceAnswerInput');
+            input.value = '';
+            input.focus();
+            document.getElementById('feedbackMsg').innerText = '';
+            document.getElementById('feedbackMsg').className = 'feedback-msg';
+            isChecking = false;
+
+            if (practiceMode === 'FOREIGN_TO_VIE') speakPracticeWord();
+        }
+
+        function speakPracticeWord() {
+            if (!practiceWordList[practiceIndex]) return;
+            let item = practiceWordList[practiceIndex];
+            let text = (practiceMode === 'FOREIGN_TO_VIE') ? item.word : item.meaning;
+            let lang = (practiceMode === 'FOREIGN_TO_VIE') ? (item.lang || 'en-US') : 'vi-VN';
+            speakText(text, lang, null);
+        }
+
+        function handlePracticeKeyUp(e) {
+            if (e.key === 'Enter') checkAnswer();
+        }
+
+        function checkAnswer() {
+            if (isChecking || practiceWordList.length === 0) return;
+
+            let inputEl = document.getElementById('practiceAnswerInput');
+            let userAns = inputEl.value.trim().toLowerCase();
+            if (!userAns) return;
+
+            isChecking = true;
+            let item = practiceWordList[practiceIndex];
+            let targetAns = (practiceMode === 'FOREIGN_TO_VIE') ? item.meaning : item.word;
+
+            let stats = store.lessons[store.activeLessonId].practiceStats[practiceMode];
+            let feedbackEl = document.getElementById('feedbackMsg');
+
+            let isCorrect = userAns === targetAns.trim().toLowerCase() || targetAns.trim().toLowerCase().includes(userAns);
+
+            if (isCorrect) {
+                stats.correct++;
+                feedbackEl.innerText = ' chính xác!';
+                feedbackEl.className = 'feedback-msg feedback-correct';
+            } else {
+                stats.wrong++;
+                stats.wrongItems.push({
+                    prompt: (practiceMode === 'FOREIGN_TO_VIE') ? item.word : item.meaning,
+                    userInput: inputEl.value.trim(),
+                    correctAnswer: targetAns
+                });
+                feedbackEl.innerText = ` Sai rồi! Đáp án đúng: "${targetAns}"`;
+                feedbackEl.className = 'feedback-msg feedback-wrong';
+            }
+
+            saveToStorage();
+            renderPracticeStats();
+
+            setTimeout(() => {
+                practiceIndex++;
+                if (practiceIndex >= practiceWordList.length) practiceIndex = 0;
+                renderPracticeWord();
+            }, 1800);
+        }
+
+        function renderPracticeStats() {
+            let active = store.lessons[store.activeLessonId];
+            if (!active || !active.practiceStats) return;
+
+            let stats = active.practiceStats[practiceMode];
+            document.getElementById('correctCount').innerText = stats.correct || 0;
+            document.getElementById('wrongCount').innerText = stats.wrong || 0;
+
+            let wrongListEl = document.getElementById('wrongList');
+            wrongListEl.innerHTML = '';
+
+            if (stats.wrongItems && stats.wrongItems.length > 0) {
+                stats.wrongItems.slice(-5).reverse().forEach(w => {
+                    let div = document.createElement('div');
+                    div.className = 'wrong-item';
+                    div.innerHTML = `<strong>${w.prompt}:</strong> <span class="wrong-user-input">${w.userInput}</span> ➔ <span class="wrong-correct-answer">${w.correctAnswer}</span>`;
+                    wrongListEl.appendChild(div);
+                });
+            }
+        }
+
+        function resetPracticeStats() {
+            let active = store.lessons[store.activeLessonId];
+            if (active && active.practiceStats) {
+                active.practiceStats[practiceMode] = { correct: 0, wrong: 0, wrongItems: [] };
+                saveToStorage();
+                renderPracticeStats();
+            }
+        }
+    </script>
+</body>
+</html>
