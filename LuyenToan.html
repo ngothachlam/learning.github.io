@@ -40,10 +40,19 @@
             margin: 0;
         }
 
+        .user-welcome {
+            font-size: 14px;
+            color: #334155;
+            font-weight: bold;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
         .icon-btn {
             background: #f1f5f9;
             border: none;
-            font-size: 20px;
+            font-size: 18px;
             padding: 6px 10px;
             border-radius: 50%;
             cursor: pointer;
@@ -94,6 +103,9 @@
         .btn-secondary { background: #059669; }
         .btn-secondary:hover { background: #047857; }
 
+        .btn-purple { background: #7c3aed; }
+        .btn-purple:hover { background: #6d28d9; }
+
         .modal-overlay {
             display: none;
             position: fixed;
@@ -108,10 +120,12 @@
             background: white;
             padding: 20px;
             border-radius: 12px;
-            width: 320px;
+            width: 90%;
+            max-width: 420px;
             display: flex;
             flex-direction: column;
             gap: 12px;
+            box-sizing: border-box;
         }
 
         .setting-option {
@@ -123,6 +137,9 @@
             color: #334155;
         }
 
+        /* SCREEN MANAGEMENT */
+        #loginScreen { display: block; }
+        #homeScreen { display: none; }
         #quizScreen { display: none; }
 
         .quiz-header {
@@ -193,20 +210,10 @@
             cursor: pointer; 
             flex-shrink: 0;
         }
-        .btn-submit:disabled {
-            background: #cbd5e1;
-            cursor: not-allowed;
-        }
+        .btn-submit:disabled { background: #cbd5e1; cursor: not-allowed; }
 
-        .result-box { 
-            width: 90%;
-            max-width: 500px;
-            text-align: center; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px; 
-        }
-        .result-score { font-size: 22px; font-weight: bold; color: #16a34a; }
+        .result-box { text-align: center; }
+        .result-score { font-size: 20px; font-weight: bold; color: #16a34a; }
         
         .result-lists-container {
             display: flex;
@@ -262,16 +269,38 @@
             text-align: left;
         }
         .leaderboard-table th { background: #f8fafc; color: #0284c7; }
+
+        /* HISTORY STYLES */
+        .history-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .history-item:hover { background: #f1f5f9; }
+        .history-info { font-size: 13px; color: #334155; }
+        .history-title { font-weight: bold; color: #0284c7; margin-bottom: 2px; }
+        .history-badge {
+            font-weight: bold;
+            font-size: 14px;
+            color: #16a34a;
+            background: #dcfce7;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- MÀN HÌNH HOME -->
-    <div class="card-panel" id="homeScreen">
-        <div class="home-header">
-            <h2 class="home-title">Luyện Toán Cho Bé ✏️</h2>
-            <button class="icon-btn" onclick="openSetting()">⚙️</button>
-        </div>
+    <!-- 1. MÀN HÌNH ĐĂNG NHẬP -->
+    <div class="card-panel" id="loginScreen">
+        <h2 class="home-title" style="text-align: center; margin-bottom: 24px;">🔑 Đăng Nhập / Đăng Ký</h2>
 
         <div class="form-group">
             <label>Tên bé:</label>
@@ -281,6 +310,22 @@
         <div class="form-group">
             <label>Mã PIN (4 số):</label>
             <input type="password" id="pinInput" placeholder="****" maxlength="4">
+        </div>
+
+        <button class="btn-start" id="btnLogin">Đăng Nhập</button>
+    </div>
+
+    <!-- 2. MÀN HÌNH HOME -->
+    <div class="card-panel" id="homeScreen">
+        <div class="home-header">
+            <div>
+                <h2 class="home-title">Luyện Toán Cho Bé ✏️</h2>
+                <div class="user-welcome">Xin chào, <span id="displayUsername" style="color:#0284c7;">...</span>!</div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button class="icon-btn" onclick="openSetting()" title="Cài đặt">⚙️</button>
+                <button class="icon-btn" onclick="logout()" title="Đăng xuất">🚪</button>
+            </div>
         </div>
 
         <div class="form-group">
@@ -307,6 +352,7 @@
         </div>
 
         <button class="btn-start" id="btnStartQuiz">🚀 Bắt Đầu Làm Bài</button>
+        <button class="btn-start btn-purple" id="btnOpenHistory">📜 Lịch Sử Làm Bài</button>
         <button class="btn-start btn-secondary" id="btnOpenLeaderboard">🏆 Bảng Xếp Hạng</button>
     </div>
 
@@ -332,7 +378,7 @@
 
     <!-- POPUP LEADERBOARD -->
     <div class="modal-overlay" id="leaderboardModal">
-        <div class="setting-card" style="width: 380px;">
+        <div class="setting-card">
             <h3 style="margin:0 0 8px 0; color:#0284c7; text-align:center;">🏆 Bảng Xếp Hạng Top 10</h3>
             <div id="leaderboardContent" style="max-height: 250px; overflow-y: auto;">
                 Đang tải dữ liệu...
@@ -341,7 +387,39 @@
         </div>
     </div>
 
-    <!-- MÀN HÌNH LÀM BÀI -->
+    <!-- POPUP DANH SÁCH LỊCH SỬ -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="setting-card">
+            <h3 style="margin:0 0 8px 0; color:#7c3aed; text-align:center;">📜 Lịch Sử Làm Bài</h3>
+            <div id="historyListContent" style="max-height: 320px; overflow-y: auto;">
+                Đang tải lịch sử...
+            </div>
+            <button class="btn-start" style="padding:8px; background:#64748b;" onclick="closeHistory()">Đóng</button>
+        </div>
+    </div>
+
+    <!-- POPUP CHI TIẾT LẦN LÀM BÀI -->
+    <div class="modal-overlay" id="historyDetailModal" style="z-index: 101;">
+        <div class="setting-card result-box">
+            <h3 style="margin:0; color:#7c3aed;" id="historyDetailTitle">Chi Tiết Bài Làm</h3>
+            <div class="result-score" id="historyDetailScore">Đúng: 0 / 0</div>
+            
+            <div class="result-lists-container">
+                <div class="result-col wrong-col">
+                    <div class="result-col-title" style="color:#dc2626;">❌ Câu sai</div>
+                    <ul class="result-ul" id="historyWrongList" style="color:#991b1b;"></ul>
+                </div>
+                <div class="result-col correct-col">
+                    <div class="result-col-title" style="color:#16a34a;">✅ Câu đúng</div>
+                    <ul class="result-ul" id="historyCorrectList" style="color:#166534;"></ul>
+                </div>
+            </div>
+
+            <button class="btn-start" onclick="closeHistoryDetail()" style="background:#64748b;">Quay Lại</button>
+        </div>
+    </div>
+
+    <!-- 3. MÀN HÌNH LÀM BÀI -->
     <div class="card-panel" id="quizScreen">
         <div class="quiz-header">
             <button class="icon-btn" style="border-radius:8px; font-size:14px;" onclick="quitQuiz()">🏠 Home</button>
@@ -362,7 +440,7 @@
         </div>
     </div>
 
-    <!-- POPUP KẾT QUẢ HẾT GIỜ -->
+    <!-- POPUP KẾT QUẢ VỪA LÀM XONG -->
     <div class="modal-overlay" id="resultModal">
         <div class="setting-card result-box">
             <h3 style="margin:0; color:#0284c7;">🎉 Hết giờ làm bài!</h3>
@@ -383,15 +461,15 @@
         </div>
     </div>
 
-    <!-- SDK FIREBASE (v9 Modules) -->
+    <!-- SDK FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
-            getFirestore, doc, getDoc, setDoc, updateDoc, increment, 
+            getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, increment, 
             collection, query, orderBy, limit, getDocs 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // === DÁN CẤU HÌNH FIREBASE CỦA BẠN VÀO ĐÂY ===
+        // === CẤU HÌNH FIREBASE ===
         const firebaseConfig = {
             apiKey: "AIzaSyD3HPISCYt5_AF7n4woe0c-UzLwwtjemVo",
             authDomain: "luye-4b2b6.firebaseapp.com",
@@ -410,6 +488,7 @@
         window.getDoc = getDoc;
         window.setDoc = setDoc;
         window.updateDoc = updateDoc;
+        window.addDoc = addDoc;
         window.increment = increment;
         window.collection = collection;
         window.query = query;
@@ -417,8 +496,10 @@
         window.limit = limit;
         window.getDocs = getDocs;
 
-        document.getElementById('btnStartQuiz').addEventListener('click', handleStartQuiz);
+        document.getElementById('btnLogin').addEventListener('click', handleLogin);
+        document.getElementById('btnStartQuiz').addEventListener('click', startQuiz);
         document.getElementById('btnOpenLeaderboard').addEventListener('click', openLeaderboard);
+        document.getElementById('btnOpenHistory').addEventListener('click', openHistory);
     </script>
 
     <script>
@@ -427,6 +508,7 @@
         let rawDigits = []; 
         let wrongHistory = [], correctHistory = [];
         let totalQuestions = 0, correctQuestions = 0;
+        let fetchedHistoryData = [];
 
         let timerInterval = null;
         let totalSeconds = 0, remainingSeconds = 0;
@@ -436,12 +518,17 @@
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         window.onload = () => {
-            document.getElementById('usernameInput').value = localStorage.getItem('toan_username') || '';
-            document.getElementById('pinInput').value = localStorage.getItem('toan_pin') || '';
+            const savedUser = localStorage.getItem('toan_username');
+            const savedPin = localStorage.getItem('toan_pin');
+            if (savedUser && savedPin) {
+                document.getElementById('usernameInput').value = savedUser;
+                document.getElementById('pinInput').value = savedPin;
+                autoLogin(savedUser, savedPin);
+            }
         };
 
-        // --- XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ VỚI FIREBASE ---
-        async function handleStartQuiz() {
+        // --- ĐĂNG NHẬP / ĐĂNG KÝ ---
+        async function handleLogin() {
             const username = document.getElementById('usernameInput').value.trim().toLowerCase();
             const pin = document.getElementById('pinInput').value.trim();
 
@@ -455,13 +542,11 @@
                 const userSnap = await window.getDoc(userRef);
 
                 if (userSnap.exists()) {
-                    // Đã có tài khoản -> Kiểm tra PIN
                     if (userSnap.data().pin !== pin) {
                         alert("Mã PIN không chính xác!");
                         return;
                     }
                 } else {
-                    // Chưa có tài khoản -> Tự động tạo mới
                     await window.setDoc(userRef, {
                         username: username,
                         pin: pin,
@@ -476,14 +561,41 @@
                 localStorage.setItem('toan_username', username);
                 localStorage.setItem('toan_pin', pin);
 
-                startQuiz();
+                showHomeScreen();
             } catch (err) {
                 console.error("Firebase Auth Error:", err);
                 alert("Lỗi kết nối CSDL!");
             }
         }
 
-        // --- LẤY BẢNG XẾP HẠNG TOP 10 ---
+        async function autoLogin(username, pin) {
+            try {
+                const userRef = window.doc(window.db, "users", username);
+                const userSnap = await window.getDoc(userRef);
+                if (userSnap.exists() && userSnap.data().pin === pin) {
+                    currentUser = username;
+                    currentPin = pin;
+                    showHomeScreen();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function showHomeScreen() {
+            document.getElementById('displayUsername').innerText = currentUser;
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('homeScreen').style.display = 'block';
+        }
+
+        function logout() {
+            localStorage.removeItem('toan_username');
+            localStorage.removeItem('toan_pin');
+            currentUser = "";
+            currentPin = "";
+            document.getElementById('homeScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'block';
+        }
+
+        // --- BẢNG XẾP HẠNG ---
         async function openLeaderboard() {
             document.getElementById('leaderboardModal').style.display = 'flex';
             document.getElementById('leaderboardContent').innerHTML = 'Đang tải dữ liệu...';
@@ -513,6 +625,84 @@
         }
 
         function closeLeaderboard() { document.getElementById('leaderboardModal').style.display = 'none'; }
+
+        // --- LỊCH SỬ LÀM BÀI ---
+        async function openHistory() {
+            document.getElementById('historyModal').style.display = 'flex';
+            document.getElementById('historyListContent').innerHTML = 'Đang tải lịch sử...';
+
+            try {
+                const historyRef = window.collection(window.db, "users", currentUser, "history");
+                const q = window.query(historyRef, window.orderBy("createdAt", "desc"), window.limit(20));
+                const querySnapshot = await window.getDocs(q);
+
+                fetchedHistoryData = [];
+                if (querySnapshot.empty) {
+                    document.getElementById('historyListContent').innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">Bé chưa có lịch sử làm bài</div>';
+                    return;
+                }
+
+                let html = '';
+                let index = 0;
+                querySnapshot.forEach((doc) => {
+                    const item = doc.data();
+                    fetchedHistoryData.push(item);
+
+                    let dateStr = item.createdAt ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : '';
+                    let opName = item.op === '+' ? 'Cộng' : (item.op === '-' ? 'Trừ' : (item.op === '*' ? 'Nhân' : 'Chia'));
+
+                    html += `
+                        <div class="history-item" onclick="showHistoryDetail(${index})">
+                            <div class="history-info">
+                                <div class="history-title">Phép ${opName} (${item.digits} số) - ${item.minutes} phút</div>
+                                <div style="font-size:11px; color:#64748b;">${dateStr}</div>
+                            </div>
+                            <div class="history-badge">${item.correctCount}/${item.totalCount}</div>
+                        </div>
+                    `;
+                    index++;
+                });
+
+                document.getElementById('historyListContent').innerHTML = html;
+            } catch (err) {
+                console.error("History Error:", err);
+                document.getElementById('historyListContent').innerHTML = 'Lỗi tải lịch sử!';
+            }
+        }
+
+        function closeHistory() { document.getElementById('historyModal').style.display = 'none'; }
+
+        function showHistoryDetail(index) {
+            const data = fetchedHistoryData[index];
+            if (!data) return;
+
+            let opName = data.op === '+' ? 'Cộng' : (data.op === '-' ? 'Trừ' : (data.op === '*' ? 'Nhân' : 'Chia'));
+            document.getElementById('historyDetailTitle').innerText = `Phép ${opName} (${data.digits} số)`;
+            document.getElementById('historyDetailScore').innerText = `Đúng: ${data.correctCount} / ${data.totalCount} câu`;
+
+            let wrongUl = document.getElementById('historyWrongList');
+            let correctUl = document.getElementById('historyCorrectList');
+
+            if (!data.wrongList || data.wrongList.length === 0) {
+                wrongUl.innerHTML = '<li style="color:#94a3b8; font-weight:normal;">Không có câu sai</li>';
+            } else {
+                wrongUl.innerHTML = data.wrongList.map(item => 
+                    `<li><span>${item.a}${item.op}${item.b}=${item.expected}</span><span style="color:#dc2626;">(${item.userAns})</span></li>`
+                ).join('');
+            }
+
+            if (!data.correctList || data.correctList.length === 0) {
+                correctUl.innerHTML = '<li style="color:#94a3b8; font-weight:normal;">Chưa có câu đúng</li>';
+            } else {
+                correctUl.innerHTML = data.correctList.map(item => 
+                    `<li><span>${item.a}${item.op}${item.b}=${item.ans}</span></li>`
+                ).join('');
+            }
+
+            document.getElementById('historyDetailModal').style.display = 'flex';
+        }
+
+        function closeHistoryDetail() { document.getElementById('historyDetailModal').style.display = 'none'; }
 
         /* --- GIỌNG ĐỌC & ÂM THANH --- */
         let selectedVietnameseVoice = null;
@@ -580,6 +770,7 @@
             }
         }
 
+        // --- LUỒNG BÀI TẬP ---
         function startQuiz() {
             let minutes = parseInt(document.getElementById('timeInput').value) || 1;
             totalSeconds = minutes * 60;
@@ -637,17 +828,31 @@
             renderResultLists();
             document.getElementById('resultModal').style.display = 'flex';
 
-            // CỘNG DỒN ĐIỂM VÀO FIREBASE
+            // LƯU KẾT QUẢ VÀO FIREBASE
             if (currentUser) {
                 try {
+                    // 1. Cập nhật tổng số điểm tích lũy
                     const userRef = window.doc(window.db, "users", currentUser);
                     await window.updateDoc(userRef, {
                         correctCount: window.increment(correctQuestions),
                         totalQuestions: window.increment(totalQuestions),
                         lastUpdated: new Date()
                     });
+
+                    // 2. Thêm bản ghi chi tiết vào sub-collection history
+                    const historyRef = window.collection(window.db, "users", currentUser, "history");
+                    await window.addDoc(historyRef, {
+                        op: document.getElementById('opSelect').value,
+                        digits: parseInt(document.getElementById('digitSelect').value),
+                        minutes: parseInt(document.getElementById('timeInput').value),
+                        correctCount: correctQuestions,
+                        totalCount: totalQuestions,
+                        correctList: correctHistory,
+                        wrongList: wrongHistory,
+                        createdAt: new Date()
+                    });
                 } catch (e) {
-                    console.error("Error updating score:", e);
+                    console.error("Error saving history:", e);
                 }
             }
         }
@@ -673,7 +878,10 @@
             }
         }
 
-        function closeResult() { document.getElementById('resultModal').style.display = 'none'; }
+        function closeResult() { 
+            document.getElementById('resultModal').style.display = 'none';
+            quitQuiz();
+        }
 
         function quitQuiz() {
             clearInterval(timerInterval);
