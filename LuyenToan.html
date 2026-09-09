@@ -26,7 +26,6 @@
             position: relative;
         }
 
-        /* ------------------ MÀN HÌNH HOME ------------------ */
         .home-header {
             display: flex;
             justify-content: space-between;
@@ -64,7 +63,7 @@
             color: #334155;
         }
 
-        select, input[type="number"] {
+        select, input[type="number"], input[type="text"], input[type="password"] {
             font-size: 15px;
             font-weight: bold;
             padding: 8px 12px;
@@ -91,8 +90,12 @@
             margin-top: 10px;
         }
         .btn-start:hover { background: #0369a1; }
+        
+        .btn-secondary {
+            background: #059669;
+        }
+        .btn-secondary:hover { background: #047857; }
 
-        /* ------------------ POPUP SETTING ------------------ */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -122,7 +125,6 @@
             color: #334155;
         }
 
-        /* ------------------ MÀN HÌNH LÀM BÀI ------------------ */
         #quizScreen { display: none; }
 
         .quiz-header {
@@ -152,7 +154,6 @@
             padding: 20px 0;
         }
 
-        /* Phép tính cột đứng */
         .vertical-math {
             display: flex;
             flex-direction: column;
@@ -168,7 +169,7 @@
         .op-symbol { position: absolute; left: 0; top: 0; color: #0284c7; }
         .line { width: 100%; height: 2px; background-color: #1e293b; margin: 4px 0 6px 0; }
 
-        input[type="text"] { 
+        .math-input { 
             font-family: 'Courier New', Courier, monospace;
             font-size: 28px; 
             font-weight: bold;
@@ -177,7 +178,7 @@
             border-radius: 8px; 
             background: #f0f9ff;
         }
-        input[type="text"]:disabled {
+        .math-input:disabled {
             background: #f1f5f9;
             border-color: #cbd5e1;
             color: #94a3b8;
@@ -199,7 +200,6 @@
             cursor: not-allowed;
         }
 
-        /* Modal Kết quả */
         .result-box { 
             width: 90%;
             max-width: 500px;
@@ -251,15 +251,38 @@
             display: flex;
             justify-content: space-between;
         }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        .leaderboard-table th { background: #f8fafc; color: #0284c7; }
     </style>
 </head>
 <body>
 
-    <!-- ==================== MÀN HÌNH HOME ==================== -->
+    <!-- MÀN HÌNH HOME -->
     <div class="card-panel" id="homeScreen">
         <div class="home-header">
             <h2 class="home-title">Luyện Toán Cho Bé ✏️</h2>
             <button class="icon-btn" onclick="openSetting()">⚙️</button>
+        </div>
+
+        <div class="form-group">
+            <label>Tên bé:</label>
+            <input type="text" id="usernameInput" placeholder="Nhập tên bé...">
+        </div>
+
+        <div class="form-group">
+            <label>Mã PIN (4 số):</label>
+            <input type="password" id="pinInput" placeholder="****" maxlength="4">
         </div>
 
         <div class="form-group">
@@ -285,10 +308,11 @@
             <input type="number" id="timeInput" value="3" min="1" max="60">
         </div>
 
-        <button class="btn-start" onclick="startQuiz()">🚀 Bắt Đầu Làm Bài</button>
+        <button class="btn-start" onclick="handleStartQuiz()">🚀 Bắt Đầu Làm Bài</button>
+        <button class="btn-start btn-secondary" onclick="openLeaderboard()">🏆 Bảng Xếp Hạng</button>
     </div>
 
-    <!-- ==================== POPUP SETTING ==================== -->
+    <!-- POPUP SETTING -->
     <div class="modal-overlay" id="settingModal">
         <div class="setting-card">
             <h3 style="margin:0 0 8px 0; color:#0284c7;">Cài Đặt</h3>
@@ -312,7 +336,18 @@
         </div>
     </div>
 
-    <!-- ==================== MÀN HÌNH LÀM BÀI ==================== -->
+    <!-- POPUP LEADERBOARD -->
+    <div class="modal-overlay" id="leaderboardModal">
+        <div class="setting-card" style="width: 380px;">
+            <h3 style="margin:0 0 8px 0; color:#0284c7; text-align:center;">🏆 Bảng Xếp Hạng Top 10</h3>
+            <div id="leaderboardContent" style="max-height: 250px; overflow-y: auto;">
+                Đang tải dữ liệu...
+            </div>
+            <button class="btn-start" style="padding:8px; background:#64748b;" onclick="closeLeaderboard()">Đóng</button>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH LÀM BÀI -->
     <div class="card-panel" id="quizScreen">
         <div class="quiz-header">
             <button class="icon-btn" style="border-radius:8px; font-size:14px;" onclick="quitQuiz()">🏠 Home</button>
@@ -325,7 +360,7 @@
                     <div class="num-row" id="numA">0</div>
                     <div class="num-row"><span class="op-symbol" id="opSymbol">+</span><span id="numB">0</span></div>
                     <div class="line" style="width: 100%;"></div>
-                    <input type="text" id="userAnswer" placeholder="?" inputmode="numeric" autofocus autocomplete="off" 
+                    <input type="text" id="userAnswer" class="math-input" placeholder="?" inputmode="numeric" autofocus autocomplete="off" 
                            style="width: 100%; box-sizing: border-box; text-align: right; margin: 0;">
                 </div>
                 <button class="btn-submit" id="btnSubmit" onclick="checkAnswer()" style="height: 40px; margin-bottom: 2px;">➔</button>
@@ -333,19 +368,17 @@
         </div>
     </div>
 
-    <!-- ==================== POPUP KẾT QUẢ HẾT GIỜ ==================== -->
+    <!-- POPUP KẾT QUẢ HẾT GIỜ -->
     <div class="modal-overlay" id="resultModal">
         <div class="setting-card result-box">
             <h3 style="margin:0; color:#0284c7;">🎉 Hết giờ làm bài!</h3>
             <div class="result-score" id="finalScoreText">Đúng: 0 / 0</div>
             
             <div class="result-lists-container">
-                <!-- Cột trái: Câu sai -->
                 <div class="result-col wrong-col">
                     <div class="result-col-title" style="color:#dc2626;">❌ Các câu sai</div>
                     <ul class="result-ul" id="modalWrongList" style="color:#991b1b;"></ul>
                 </div>
-                <!-- Cột phải: Câu đúng -->
                 <div class="result-col correct-col">
                     <div class="result-col-title" style="color:#16a34a;">✅ Các câu đúng</div>
                     <ul class="result-ul" id="modalCorrectList" style="color:#166534;"></ul>
@@ -357,21 +390,85 @@
     </div>
 
     <script>
+        // === CẤU HÌNH GOOGLE APPS SCRIPT URL ===
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXy_if6mnFHhXUuMjtXYG4KvHoI44gn1N62Dzu7fIIsbrIlrw4AkVrEfPCmi_DZMymGw/exec";
+
+        let currentUser = "", currentPin = "";
         let currentA = 0, currentB = 0, currentOp = '+';
         let rawDigits = []; 
-        let wrongHistory = [];
-        let correctHistory = [];
+        let wrongHistory = [], correctHistory = [];
         let totalQuestions = 0, correctQuestions = 0;
 
         let timerInterval = null;
-        let totalSeconds = 0;
-        let remainingSeconds = 0;
+        let totalSeconds = 0, remainingSeconds = 0;
 
         const inputEl = document.getElementById("userAnswer");
         const btnSubmitEl = document.getElementById("btnSubmit");
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        /* --- GIỌNG ĐỌC HỆ THỐNG --- */
+        // Cập nhật tên/mã PIN từ LocalStorage
+        window.onload = () => {
+            document.getElementById('usernameInput').value = localStorage.getItem('toan_username') || '';
+            document.getElementById('pinInput').value = localStorage.getItem('toan_pin') || '';
+        };
+
+        async function fetchAPI(payload) {
+            try {
+                const res = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                return await res.json();
+            } catch (e) {
+                console.error("API Error:", e);
+                return { status: "error", message: "Lỗi kết nối máy chủ!" };
+            }
+        }
+
+        async function handleStartQuiz() {
+            const username = document.getElementById('usernameInput').value.trim();
+            const pin = document.getElementById('pinInput').value.trim();
+
+            if (!username || !pin) {
+                alert("Vui lòng nhập Tên bé và Mã PIN!");
+                return;
+            }
+
+            // Gọi API xác thực tài khoản
+            const res = await fetchAPI({ action: "login", username, pin });
+            if (res.status === "error") {
+                alert(res.message);
+                return;
+            }
+
+            currentUser = username;
+            currentPin = pin;
+            localStorage.setItem('toan_username', username);
+            localStorage.setItem('toan_pin', pin);
+
+            startQuiz();
+        }
+
+        async function openLeaderboard() {
+            document.getElementById('leaderboardModal').style.display = 'flex';
+            document.getElementById('leaderboardContent').innerHTML = 'Đang tải dữ liệu...';
+            
+            const res = await fetchAPI({ action: "getLeaderboard" });
+            if (res.status === "success") {
+                let html = '<table class="leaderboard-table"><tr><th>Hạng</th><th>Tên</th><th>Đúng</th></tr>';
+                res.data.forEach((item, index) => {
+                    html += `<tr><td>#${index + 1}</td><td><b>${item.username}</b></td><td>${item.correct}</td></tr>`;
+                });
+                html += '</table>';
+                document.getElementById('leaderboardContent').innerHTML = html;
+            } else {
+                document.getElementById('leaderboardContent').innerHTML = 'Lỗi tải bảng xếp hạng!';
+            }
+        }
+
+        function closeLeaderboard() { document.getElementById('leaderboardModal').style.display = 'none'; }
+
+        /* --- GIỌNG ĐỌC --- */
         let selectedVietnameseVoice = null;
         function loadVietnameseVoice() {
             if (!('speechSynthesis' in window)) return;
@@ -393,16 +490,13 @@
             msg.lang = 'vi-VN';
             if (selectedVietnameseVoice) msg.voice = selectedVietnameseVoice;
 
-            msg.rate = 0.88; 
-            msg.pitch = 1.1; 
+            msg.rate = 0.88; msg.pitch = 1.1; 
             window.speechSynthesis.speak(msg);
         }
 
-        /* --- SETTING MODAL --- */
         function openSetting() { document.getElementById('settingModal').style.display = 'flex'; }
         function closeSetting() { document.getElementById('settingModal').style.display = 'none'; }
 
-        /* --- SOUND EFFECTS --- */
         function playSound(type) {
             if (!document.getElementById('soundEffectCheck').checked) return;
             if (audioCtx.state === 'suspended') { audioCtx.resume(); }
@@ -441,7 +535,6 @@
             }
         }
 
-        /* --- BẮT ĐẦU & ĐẾM NGƯỢC --- */
         function startQuiz() {
             let minutes = parseInt(document.getElementById('timeInput').value) || 1;
             totalSeconds = minutes * 60;
@@ -452,7 +545,6 @@
             wrongHistory = [];
             correctHistory = [];
 
-            // Mở lại tương tác ô nhập
             inputEl.disabled = false;
             btnSubmitEl.disabled = false;
 
@@ -467,9 +559,6 @@
         }
 
         function handleTimerTick() {
-            if (remainingSeconds === totalSeconds) {
-                speak(`Bắt đầu làm bài nào!`);
-            }
             remainingSeconds--;
             updateTimerDisplay();
 
@@ -490,12 +579,11 @@
                 `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
-        function finishQuiz() {
+        async function finishQuiz() {
             clearInterval(timerInterval);
             playSound('finish');
             speak("Đã hết giờ làm bài rồi!");
 
-            // Vô hiệu hóa nhập liệu khi hết giờ
             inputEl.disabled = true;
             btnSubmitEl.disabled = true;
 
@@ -503,13 +591,24 @@
             
             renderResultLists();
             document.getElementById('resultModal').style.display = 'flex';
+
+            // Đồng bộ điểm lên Google Sheets
+            if (currentUser && SCRIPT_URL !== "DÁN_URL_WEB_APP_CỦA_BẠN_VÀO_ĐÂY") {
+                fetchAPI({
+                    action: "saveScore",
+                    username: currentUser,
+                    pin: currentPin,
+                    correct: correctQuestions,
+                    total: totalQuestions,
+                    timeSeconds: totalSeconds
+                });
+            }
         }
 
         function renderResultLists() {
             let wrongUl = document.getElementById('modalWrongList');
             let correctUl = document.getElementById('modalCorrectList');
 
-            // Render câu sai
             if (wrongHistory.length === 0) {
                 wrongUl.innerHTML = '<li style="color:#94a3b8; font-weight:normal;">Không có câu sai</li>';
             } else {
@@ -518,7 +617,6 @@
                 ).join('');
             }
 
-            // Render câu đúng
             if (correctHistory.length === 0) {
                 correctUl.innerHTML = '<li style="color:#94a3b8; font-weight:normal;">Chưa có câu đúng</li>';
             } else {
@@ -538,7 +636,6 @@
             document.getElementById('homeScreen').style.display = 'block';
         }
 
-        /* --- XỬ LÝ NHẬP LIỆU & GÕ NGƯỢC --- */
         inputEl.addEventListener("keydown", function(event) {
             if (inputEl.disabled) return;
             let isReverse = document.getElementById("reverseInputCheck").checked;
@@ -589,7 +686,6 @@
             return false;
         }
 
-        /* --- TẠO ĐỀ BÀI --- */
         function generateProblem() {
             currentOp = document.getElementById('opSelect').value;
             let digits = parseInt(document.getElementById('digitSelect').value);
@@ -633,7 +729,6 @@
             if (!inputEl.disabled) inputEl.focus();
         }
 
-        /* --- KIỂM TRA KẾT QUẢ --- */
         function checkAnswer() {
             if (inputEl.disabled) return;
             let input = inputEl.value.trim();
